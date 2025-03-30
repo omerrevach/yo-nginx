@@ -57,9 +57,8 @@ jobs:
         with:
           name: checkov-report
           path: checkov-results.sarif
-  # Will only get triggered if all tests are successful
   terraform:
-    name: Terraform Plan, Apply and other checks
+    name: Terraform Apply
     needs: [secrets-scan, docker-scan, checkov]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -67,17 +66,25 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
-    defaults:
-      run:
-        working-directory: tf
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.6
+          
+      # Makes sure s3 bucket exists first for statefile
+      - name: Apply S3 State Bucket
+        working-directory: s3_state
+        run: |
+          terraform init
+          terraform apply -auto-approve
+          
+      # Then apply the main infra
       - name: Create tfvars file
+        working-directory: tf
         run: |
           cat > terraform.auto.tfvars <<EOF
           vpc_name = "${{ secrets.TF_VAR_vpc_name }}"
@@ -95,18 +102,24 @@ jobs:
           domain_name = "${{ secrets.TF_VAR_domain_name }}"
           region = "${{ secrets.TF_VAR_region }}"
           EOF
+          
       - name: Terraform Format Check
+        working-directory: tf
         run: terraform fmt -check -recursive || true
+        
       - name: Terraform Init
+        working-directory: tf
         run: terraform init
+        
       - name: Terraform Validate
+        working-directory: tf
         run: terraform validate
+        
       - name: Terraform Apply
-        if: github.event.inputs.action != 'destroy'
+        working-directory: tf
         run: terraform apply -auto-approve
-      - name: Terraform Destroy
-        if: github.event.inputs.action == 'destroy'
-        run: terraform destroy -auto-approve
+        
       - name: Clean up sensitive files
         if: always()
+        working-directory: tf
         run: rm -f terraform.auto.tfvars
