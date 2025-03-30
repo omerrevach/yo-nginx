@@ -18,7 +18,7 @@ resource "aws_security_group" "ec2_sg" {
 }
 
 resource "aws_instance" "nginx" {
-  for_each = toset(var.subnet_ids)
+  count = length(var.subnet_ids)
 
   ami                         = var.linux_ami
   instance_type               = var.instance_type
