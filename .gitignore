@@ -1,0 +1,16 @@
+terraform.tfvars
+
+# Docker
+*.log
+*.pid
+*.seed
+*.pid.lock
+*.swp
+.env
+account_id
+
+.terraform/
+terraform
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
