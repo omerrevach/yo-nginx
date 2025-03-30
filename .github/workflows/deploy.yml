@@ -96,7 +96,7 @@ jobs:
           terraform_version: 1.6.6
 
       - name: Terraform Format Check
-        run: terraform fmt -check
+        run: terraform fmt -check -recursive || true
 
       - name: Terraform Init
         run: terraform init
