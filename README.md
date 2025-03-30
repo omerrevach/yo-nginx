@@ -27,6 +27,9 @@ Everything is deployed using **Terraform**, **GitHub Actions**, and follows best
 - **SSM & VPC Endpoints** for secure EC2 management (no public IPs)
 - **Terraform modules** for VPC, EC2, ALB, IAM, Route53, and Endpoints
 
+HTTPS is terminated at the ALB.
+The Dockerized nginx instance on EC2 listens on HTTP only, since the EC2 is deployed in a private subnet with no public IP and is only accessible through the ALB.
+
 
 ## Architecture Diagram
 
