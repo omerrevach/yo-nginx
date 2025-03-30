@@ -50,10 +50,10 @@ variable "instance_type" {
 }
 
 # alb
-variable "alb_name_prefix" {
-  type        = string
-  description = "Prefix for ALB resource names"
-}
+# variable "alb_name_prefix" {
+#   type        = string
+#   description = "Prefix for ALB resource names"
+# }
 
 # route53
 variable "hosted_zone_id" {

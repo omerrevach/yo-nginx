@@ -43,7 +43,7 @@ module "iam" {
 
 module "alb" {
   source              = "./modules/alb"
-  name_prefix         = var.alb_name_prefix
+  name_prefix         = "nginx"
   vpc_id              = module.vpc.vpc_id
   public_subnet_ids   = module.vpc.public_subnet_ids
   ec2_instance_id = module.ec2.instance_id
