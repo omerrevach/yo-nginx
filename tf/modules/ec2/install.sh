@@ -1,23 +1,20 @@
 #!/bin/bash
-set -e
 
-# Update system
 yum update -y
 
-# Install Docker
-amazon-linux-extras install docker -y
+yum install -y yum-utils
 
-# Start and enable Docker
+yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
 systemctl enable docker
 systemctl start docker
 
-# Add users to docker group
 usermod -aG docker ec2-user || true
 usermod -aG docker ssm-user || true
 
-# Apply group change for current session
 echo 'newgrp docker' >> /home/ssm-user/.bashrc || true
 echo 'newgrp docker' >> /home/ec2-user/.bashrc || true
 
-# Pull and run container
 docker run -d -p 80:80 rebachi/nginx-assignment:latest
