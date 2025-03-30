@@ -22,7 +22,7 @@ resource "aws_instance" "nginx" {
 
   ami                         = var.linux_ami
   instance_type               = var.instance_type
-  subnet_id                   = each.value
+  subnet_id                   = var.subnet_ids[count.index]
   vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
   iam_instance_profile        = var.instance_profile_name
   associate_public_ip_address = false
