@@ -102,7 +102,11 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
       - name: Terraform Apply
+        if: github.event.inputs.action != 'destroy'
         run: terraform apply -auto-approve
+      - name: Terraform Destroy
+        if: github.event.inputs.action == 'destroy'
+        run: terraform destroy -auto-approve
       - name: Clean up sensitive files
         if: always()
         run: rm -f terraform.auto.tfvars
