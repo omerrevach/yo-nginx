@@ -1,5 +1,4 @@
 name: Terraform CI/CD
-
 on:
   push:
     branches:
@@ -8,7 +7,6 @@ on:
   pull_request:
     branches:
       - main
-
 jobs:
   secrets-scan:
     name: Gitleaks Scan
@@ -17,18 +15,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Run Gitleaks
         uses: zricethezav/gitleaks-action@v2
         with:
           args: "--report-format sarif --report-path=gitleaks.sarif"
-
       - name: Upload Gitleaks Report
         uses: actions/upload-artifact@v4
         with:
           name: gitleaks-report
           path: gitleaks.sarif
-
   docker-scan:
     name: Trivy Dockerfile Scan
     runs-on: ubuntu-latest
@@ -36,20 +31,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-
       - name: Run Trivy and Save Report
         run: trivy config . --format sarif --output trivy-results.sarif || true
-
       - name: Upload Trivy Report
         uses: actions/upload-artifact@v4
         with:
           name: trivy-report
           path: trivy-results.sarif
-
   checkov:
     name: Checkov Terraform Scan
     runs-on: ubuntu-latest
@@ -57,52 +48,61 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Install Checkov
         run: pip install checkov
-
       - name: Run Checkov and Save Report
         run: checkov -d ./tf --output sarif > checkov-results.sarif || true
-
       - name: Upload Checkov Report
         uses: actions/upload-artifact@v4
         with:
           name: checkov-report
           path: checkov-results.sarif
-
   # Will only get triggered if all tests are successful
   terraform:
     name: Terraform Plan, Apply and other checks
     needs: [secrets-scan, docker-scan, checkov]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
-
     defaults:
       run:
         working-directory: tf
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.6
-
+      - name: Create tfvars file
+        run: |
+          cat > terraform.auto.tfvars <<EOF
+          vpc_name = "${{ secrets.TF_VAR_vpc_name }}"
+          cidr = "${{ secrets.TF_VAR_cidr }}"
+          azs = ${{ secrets.TF_VAR_azs }}
+          public_subnets = ${{ secrets.TF_VAR_public_subnets }}
+          private_subnets = ${{ secrets.TF_VAR_private_subnets }}
+          enable_nat_gateway = ${{ secrets.TF_VAR_enable_nat_gateway }}
+          single_nat_gateway = ${{ secrets.TF_VAR_single_nat_gateway }}
+          one_nat_gateway_per_az = ${{ secrets.TF_VAR_one_nat_gateway_per_az }}
+          environment = "${{ secrets.TF_VAR_environment }}"
+          linux_ami = "${{ secrets.TF_VAR_linux_ami }}"
+          instance_type = "${{ secrets.TF_VAR_instance_type }}"
+          hosted_zone_id = "${{ secrets.TF_VAR_hosted_zone_id }}"
+          domain_name = "${{ secrets.TF_VAR_domain_name }}"
+          region = "${{ secrets.TF_VAR_region }}"
+          EOF
       - name: Terraform Format Check
         run: terraform fmt -check -recursive || true
-
       - name: Terraform Init
         run: terraform init
-
       - name: Terraform Validate
         run: terraform validate
-
       - name: Terraform Apply
         run: terraform apply -auto-approve
+      - name: Clean up sensitive files
+        if: always()
+        run: rm -f terraform.auto.tfvars
