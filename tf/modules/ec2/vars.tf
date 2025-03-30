@@ -1,5 +1,8 @@
 variable "vpc_id" {}
-variable "private_subnet_id" {}
+variable "subnet_ids" {
+  description = "List of private subnet id's (one per AZ)"
+  type        = list(string)
+}
 variable "linux_ami" {}
 variable "instance_type" {}
 variable "alb_sg_id" {}

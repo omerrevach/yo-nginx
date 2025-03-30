@@ -18,13 +18,12 @@ module "vpc" {
 
 module "ec2" {
   source = "./modules/ec2"
-
-  vpc_id = module.vpc.vpc_id
-  private_subnet_id = module.vpc.private_subnet_ids[0]
-  linux_ami = var.linux_ami
-  instance_type = var.instance_type
-  alb_sg_id = module.alb.alb_sg_id
-  instance_profile_name  = module.iam.instance_profile_name
+  vpc_id                = module.vpc.vpc_id
+  subnet_ids            = module.vpc.private_subnet_ids
+  linux_ami             = var.linux_ami
+  instance_type         = var.instance_type
+  alb_sg_id             = module.alb.alb_sg_id
+  instance_profile_name = module.iam.instance_profile_name
 }
 
 module "vpc_endpoints" {
@@ -40,15 +39,14 @@ module "iam" {
   source      = "./modules/iam"
 }
 
-
 module "alb" {
   source              = "./modules/alb"
-  name_prefix         = "nginx"
   vpc_id              = module.vpc.vpc_id
   public_subnet_ids   = module.vpc.public_subnet_ids
-  ec2_instance_id = module.ec2.instance_id
+  ec2_instance_ids    = module.ec2.instance_ids
   acm_certificate_arn = data.aws_acm_certificate.this.arn
 }
+
 
 module "route53" {
   source          = "./modules/route53"

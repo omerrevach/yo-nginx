@@ -18,12 +18,14 @@ resource "aws_security_group" "ec2_sg" {
 }
 
 resource "aws_instance" "nginx" {
+  for_each = toset(var.subnet_ids)
+
   ami                         = var.linux_ami
   instance_type               = var.instance_type
-  subnet_id                   = var.private_subnet_id
+  subnet_id                   = each.value
   vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
-  iam_instance_profile = var.instance_profile_name
+  iam_instance_profile        = var.instance_profile_name
   associate_public_ip_address = false
-  
+
   user_data = templatefile("${path.module}/install.sh", {})
 }

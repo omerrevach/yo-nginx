@@ -1,5 +1,5 @@
-output "instance_id" {
-  value       = aws_instance.nginx.id
+output "instance_ids" {
+  value = { for k, inst in aws_instance.nginx : k => inst.id }
 }
 
 output "private_ip" {
