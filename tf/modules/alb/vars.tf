@@ -8,6 +8,5 @@ variable "public_subnet_ids" {
 variable "acm_certificate_arn" {}
 
 variable "ec2_instance_ids" {
-  description = "Map of EC2 instance id's to register in the target group"
-  type        = map(string)
+  type = list(string)
 }
