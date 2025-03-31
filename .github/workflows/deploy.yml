@@ -1,4 +1,5 @@
 name: Terraform CI/CD
+
 on:
   push:
     branches:
@@ -7,6 +8,7 @@ on:
   pull_request:
     branches:
       - main
+
 jobs:
   secrets-scan:
     name: Gitleaks Scan
@@ -24,6 +26,7 @@ jobs:
         with:
           name: gitleaks-report
           path: gitleaks.sarif
+
   docker-scan:
     name: Trivy Dockerfile Scan
     runs-on: ubuntu-latest
@@ -41,6 +44,7 @@ jobs:
         with:
           name: trivy-report
           path: trivy-results.sarif
+
   checkov:
     name: Checkov Terraform Scan
     runs-on: ubuntu-latest
@@ -57,8 +61,9 @@ jobs:
         with:
           name: checkov-report
           path: checkov-results.sarif
+
   terraform:
-    name: Terraform Apply
+    name: Terraform Apply with ECR Push
     needs: [secrets-scan, docker-scan, checkov]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -66,23 +71,23 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.6.6
-          
-      # Makes sure s3 bucket exists first for statefile
+
       - name: Apply S3 State Bucket
         working-directory: s3_state
         run: |
           terraform init
           terraform apply -auto-approve
-          
-      # Then apply the main infra
+
       - name: Create tfvars file
         working-directory: tf
         run: |
@@ -102,23 +107,40 @@ jobs:
           domain_name = "${{ secrets.TF_VAR_domain_name }}"
           region = "${{ secrets.TF_VAR_region }}"
           EOF
-          
+
       - name: Terraform Format Check
         working-directory: tf
         run: terraform fmt -check -recursive || true
-        
+
       - name: Terraform Init
         working-directory: tf
         run: terraform init
-        
+
       - name: Terraform Validate
         working-directory: tf
         run: terraform validate
-        
-      - name: Terraform Apply
+
+      # Apply only ECR
+      - name: Terraform Apply Phase 1 - ECR Module Only
+        working-directory: tf
+        run: terraform apply -auto-approve -target=module.ecr
+
+      # Build + push Docker image to ECR
+      - name: Docker Build and Push to ECR
+        run: |
+          IMAGE_REPO="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/nginx-assignment"
+
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $IMAGE_REPO
+
+          docker build -t nginx-assignment ./docker
+          docker tag nginx-assignment:latest $IMAGE_REPO:latest
+          docker push $IMAGE_REPO:latest
+
+      # Apply the full infra
+      - name: Terraform Apply Phase 2 - Full Infra
         working-directory: tf
         run: terraform apply -auto-approve
-        
+
       - name: Clean up sensitive files
         if: always()
         working-directory: tf
