@@ -7,10 +7,6 @@ resource "aws_ecr_repository" "ecr" {
   }
 }
 
-resource "aws_ecr_repository" "example" {
-  name = "example-repo"
-}
-
 resource "aws_ecr_lifecycle_policy" "lifecycle" {
   repository = aws_ecr_repository.ecr.name
 
