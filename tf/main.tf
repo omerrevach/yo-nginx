@@ -23,6 +23,7 @@ module "ec2" {
   instance_type         = var.instance_type
   alb_sg_id             = module.alb.alb_sg_id
   instance_profile_name = module.iam.instance_profile_name
+  ecr_repo_url          = module.ecr.repository_url
 
   depends_on = [ module.ecr ]
 }

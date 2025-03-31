@@ -7,3 +7,4 @@ variable "linux_ami" {}
 variable "instance_type" {}
 variable "alb_sg_id" {}
 variable "instance_profile_name" {}
+variable "ecr_repo_url" {}
