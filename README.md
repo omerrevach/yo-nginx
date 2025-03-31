@@ -138,7 +138,35 @@ git clone https://github.com/omerrevach/yo-nginx.git
 cd yo-nginx
 ```
 
-### 2. Set Up GitHub Secrets
+### 2. Define Infrastructure Variables
+Inside the tf directory, create a file named terraform.tfvars with your configuration:
+
+```
+# VPC settings
+vpc_name           = "nginx-vpc"
+cidr               = "10.0.0.0/16"
+azs                = ["eu-north-1a", "eu-north-1b"]
+public_subnets     = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnets    = ["10.0.11.0/24", "10.0.12.0/24"]
+enable_nat_gateway         = true
+single_nat_gateway         = true
+one_nat_gateway_per_az     = false
+environment                = "dev"
+
+# EC2 settings
+linux_ami           = "ami-054ba1cb82f26097d"
+instance_type       = "t3.micro"
+
+# Route 53
+hosted_zone_id = "your_hosted_zone_id"
+domain_name    = "your.domain.com"
+
+# Region
+region = "eu-north-1"
+
+```
+
+### 3. Set Up GitHub Secrets
 In your GitHub repository, go to:
 - Settings > Secrets and variables > Actions > New repository secret
 
@@ -163,7 +191,7 @@ And these TF_VAR_* variables matching your terraform.tfvars file:
 * TF_VAR_hosted_zone_id
 * TF_VAR_domain_name
 
-### 3. Upload Terraform Variables to GitHub via CLI (More automated)
+### 4. Upload Terraform Variables to GitHub via CLI (More automated)
 
 If you prefer to automate secret creation:
 ```
@@ -172,7 +200,7 @@ chmod +x tf/upload-tfvars.sh
 ```
 This will upload each terraform.tfvars entry as a GitHub secret.
 
-### 4. Destroy Infrastructure
+### 5. Destroy Infrastructure
 GitHub Actions:
 
 Use the Terraform Destroy workflow manually from the GitHub Actions tab.
