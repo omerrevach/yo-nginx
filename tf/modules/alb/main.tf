@@ -77,11 +77,3 @@ resource "aws_lb_listener" "https" {
     target_group_arn = aws_lb_target_group.this.arn
   }
 }
-
-resource "aws_lb_target_group_attachment" "nginx" {
-  count = length(var.ec2_instance_ids)
-
-  target_group_arn = aws_lb_target_group.this.arn
-  target_id        = var.ec2_instance_ids[count.index]
-  port             = 80
-}

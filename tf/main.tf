@@ -15,8 +15,8 @@ module "vpc" {
   environment            = var.environment
 }
 
-module "ec2" {
-  source                = "./modules/ec2"
+module "asg" {
+  source                = "./modules/asg"
   vpc_id                = module.vpc.vpc_id
   subnet_ids            = module.vpc.private_subnet_ids
   linux_ami             = var.linux_ami
@@ -24,9 +24,21 @@ module "ec2" {
   alb_sg_id             = module.alb.alb_sg_id
   instance_profile_name = module.iam.instance_profile_name
   ecr_repo_url          = module.ecr.repository_url
-
-  depends_on = [ module.ecr ]
+  alb_target_group_arn  = module.alb.target_group_arn
 }
+
+# module "ec2" {
+#   source                = "./modules/ec2"
+#   vpc_id                = module.vpc.vpc_id
+#   subnet_ids            = module.vpc.private_subnet_ids
+#   linux_ami             = var.linux_ami
+#   instance_type         = var.instance_type
+#   alb_sg_id             = module.alb.alb_sg_id
+#   instance_profile_name = module.iam.instance_profile_name
+#   ecr_repo_url          = module.ecr.repository_url
+
+#   depends_on = [ module.ecr ]
+# }
 
 module "vpc_endpoints" {
   source                = "./modules/vpc_endpoints"
@@ -47,9 +59,9 @@ module "alb" {
   source              = "./modules/alb"
   vpc_id              = module.vpc.vpc_id
   public_subnet_ids   = module.vpc.public_subnet_ids
-  ec2_instance_ids    = module.ec2.instance_ids
   acm_certificate_arn = data.aws_acm_certificate.this.arn
 }
+
 
 
 module "route53" {
