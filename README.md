@@ -29,7 +29,7 @@ It is designed with best practices for security, modularity, and automation.
 
 ## Architecture Overview
 
-![Architecture](Architecture.png)
+![Architecture](images/Architecture.png)
 
 ### Key Components
 
@@ -45,7 +45,7 @@ HTTPS is terminated at the ALB. The Dockerized Nginx runs on HTTP inside private
 
 ## GitHub Actions Pipeline
 
-![CI/CD Flow](GitHub_Actions.png)
+![CI/CD Flow](images/GitHub_Actions.png)
 
 ### CI/CD Process
 
@@ -213,4 +213,4 @@ A secure, modular, production-ready infrastructure that deploys Dockerized apps 
 - Secure GitHub Actions CI/CD pipeline
 - Infrastructure-as-Code best practices with Terraform
 
-![WEbsite](yo-nginx.png)
+![WEbsite](images/yo-nginx.png)
