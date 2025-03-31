@@ -27,5 +27,7 @@ resource "aws_instance" "nginx" {
   iam_instance_profile        = var.instance_profile_name
   associate_public_ip_address = false
 
-  user_data = templatefile("${path.module}/install.sh", {})
+  user_data = templatefile("${path.module}/install.sh", {
+    ECR_REPO_URL = module.ecr.repository_url
+  })
 }

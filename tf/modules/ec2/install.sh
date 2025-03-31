@@ -6,5 +6,9 @@ sudo amazon-linux-extras install docker -y
 sudo systemctl enable docker
 sudo systemctl start docker
 sudo usermod -aG docker ssm-user
-sudo docker run -d -p 80:80 rebachi/nginx-assignment:latest
+
+aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin ${ECR_REPO_URL}
+docker pull ${ECR_REPO_URL}:latest
+docker run -d -p 80:80 ${ECR_REPO_URL}:latest
+
 newgrp docker

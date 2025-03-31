@@ -13,6 +13,29 @@ resource "aws_iam_role" "ssm_role" {
   })
 }
 
+data "aws_iam_policy_document" "ecr_pull" {
+  statement {
+    actions   = ["ecr:GetAuthorizationToken"]
+    resources = ["*"]
+  }
+
+  statement {
+    actions = [
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:BatchGetImage"
+    ]
+    resources = [var.ecr_repo_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "ecr_access" {
+  name   = "ecr-access"
+  role   = aws_iam_role.ssm_role.name
+  policy = data.aws_iam_policy_document.ecr_pull.json
+}
+
+
 resource "aws_iam_role_policy_attachment" "ssm" {
   role       = aws_iam_role.ssm_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"

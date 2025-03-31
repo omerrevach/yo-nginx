@@ -15,7 +15,6 @@ module "vpc" {
   environment            = var.environment
 }
 
-
 module "ec2" {
   source                = "./modules/ec2"
   vpc_id                = module.vpc.vpc_id
@@ -24,6 +23,8 @@ module "ec2" {
   instance_type         = var.instance_type
   alb_sg_id             = module.alb.alb_sg_id
   instance_profile_name = module.iam.instance_profile_name
+
+  depends_on = [ module.ecr ]
 }
 
 module "vpc_endpoints" {
@@ -35,8 +36,10 @@ module "vpc_endpoints" {
   name_prefix           = "ssm"
 }
 
+
 module "iam" {
-  source      = "./modules/iam"
+  source       = "./modules/iam"
+  ecr_repo_arn = module.ecr.repository_arn
 }
 
 module "alb" {
@@ -54,4 +57,9 @@ module "route53" {
   domain_name     = var.domain_name
   alb_dns_name    = module.alb.alb_dns_name
   alb_zone_id     = module.alb.alb_zone_id
+}
+
+module "ecr" {
+  source    = "./modules/ecr"
+  repo_name = "nginx-assignment"
 }
