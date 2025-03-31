@@ -1,185 +1,188 @@
-# Nginx yo
+# Nginx-yo
 
-## Overview
+This project demonstrates a complete, secure, and production-grade deployment pipeline for running a Dockerized Nginx app on private EC2 instances inside an Auto Scaling Group (ASG), behind a public HTTPS Load Balancer, with infrastructure provisioned using Terraform and deployed through GitHub Actions CI/CD.
 
-This project showcases a **fully automated and secure deployment pipeline** that launches a Dockerized NGINX server on a private EC2 instance inside a VPC. The application is publicly accessible via a Load Balancer and responds with:
+It is designed with best practices for security, modularity, and automation.
 
-yo this is nginx
+## What This Project Includes
 
-
-Everything is deployed using **Terraform**, **GitHub Actions**, and follows best practices for **security**, **IaC**, and **CI/CD**
+- Dockerized NGINX app that returns:  
+  "yo this is nginx"
+- Deployed in private subnets via Auto Scaling Group
+- Docker image pulled securely from Amazon ECR
+- EC2 instances accessed only through SSM (no public IPs)
+- Public HTTPS ALB for routing traffic to private EC2s
+- Route 53 DNS record pointing to the ALB
+- VPC Endpoints for ECR and SSM (no need for NAT Gateway for these services)
+- CI/CD pipeline using GitHub Actions
+  - Gitleaks
+  - Checkov
+  - Trivy
 
 ## Technologies Used
 
-- **Terraform** – Infrastructure as Code (modular and clean)
-- **AWS** – VPC, EC2, ALB, Route53, VPC Endpoints, SSM
-- **Docker** – Containerized NGINX app
-- **GitHub Actions** – CI/CD with security scanning
-- **Checkov**, **Trivy**, **Gitleaks** – Security tools
+- Terraform – Infrastructure as Code (modular and reusable)
+- AWS Services – VPC, EC2, ASG, ALB, Route 53, ACM, ECR, SSM, VPC Endpoints
+- Docker – For containerizing NGINX
+- GitHub Actions – CI/CD workflows
+- Security Tools – Checkov, Trivy, Gitleaks
 
-
-## Infrastructure Architecture
-
-- **Private EC2 instance** running Docker
-- **Dockerized NGINX** returning "yo this is nginx"
-- **Public ALB** for external access
-- **Route53** DNS pointing to ALB
-- **SSM & VPC Endpoints** for secure EC2 management (no public IPs)
-- **Terraform modules** for VPC, EC2, ALB, IAM, Route53, and Endpoints
-
-HTTPS is terminated at the ALB.
-The Dockerized nginx instance on EC2 listens on HTTP only, since the EC2 is deployed in a private subnet with no public IP and is only accessible through the ALB.
-
-
-## Architecture Diagram
+## Architecture Overview
 
 ![Architecture](Architecture.png)
 
+### Key Components
+
+- VPC with public and private subnets across multiple AZs
+- Private EC2 instances created through Auto Scaling Group and Launch Template
+- Dockerized Nginx running in each EC2 instance
+- Public HTTPS ALB forwarding traffic to ASG target group
+- Route 53 DNS configured to point to the ALB
+- Amazon ECR to store and serve Docker images
+- SSM + VPC Endpoints to manage EC2 securely without a bastion host or public IP
+
+HTTPS is terminated at the ALB. The Dockerized Nginx runs on HTTP inside private subnets.
 
 ## GitHub Actions Pipeline
 
-### The CI/CD pipeline is **fast, secure, and well-organized**:
+![CI/CD Flow](GitHub_Actions.png)
 
-### Security Checks (Run in Parallel):
-- **Gitleaks**: Scan for secrets in Git history
-- **Trivy**: Scan Dockerfile for vulnerabilities
-- **Checkov**: Scan Terraform for misconfigurations
+### CI/CD Process
 
-> All scans allow the pipeline to continue even if issues are found, in prod i would never do this. This is a demo so it will just run
+1. Push code to `dev`
+2. Open a pull request to `main`
+3. Run Gitleaks, Checkov, and Trivy in parallel
+4. If all security scans pass and the branch is `main`:
+   - Create S3 backend
+   - Apply Terraform with `-target=module.ecr` to create ECR
+   - Build and push Docker image to ECR
+   - Apply the rest of the infrastructure using Terraform
+5. Reports are uploaded as GitHub Action artifacts
 
-### Terraform (Main Branch Only):
-Runs **only after all security checks pass**, and **only on `main` branch** (via PR from `dev`):
+### Security Scans (Run in Parallel)
 
-- `terraform fmt -check -recursive`
-- `terraform init`
-- `terraform validate`
-- `terraform apply`
+- Gitleaks – Scan Git history for hardcoded secrets
+- Checkov – Static analysis of Terraform for misconfigurations
+- Trivy – Scan Dockerfile and image for vulnerabilities
 
-### Artifacts and Reports:
-Each security and infrastructure check generates a detailed report. These reports are saved as GitHub Actions artifacts, allowing you to download and review scan results such as:
-
-    Detected vulnerabilities
-
-    Secret exposures
-
-    Misconfigured Terraform resources
-
-This makes it easy for developers and reviewers to track issues, understand security risks, and maintain infrastructure blocking the deployment process
-
+Note: Security scans are non-blocking in this demo. In production, they would prevent deployment on failure.
 
 ## Branch Strategy
 
-- `dev`: Active development
-- `main`: Protected, only receives **Pull Requests** from `dev`
+- `dev`: Active development happens here
+- `main`: Protected branch that only receives code via pull requests
 
-This ensures that **only reviewed and scanned code reaches production**
+This ensures that all code is reviewed, scanned, and validated before deployment.
 
+## Project Structure
+
+```
+.
+├── Architecture.png
+├── docker
+│   └── Dockerfile
+├── GitHub_Actions.png
+├── image.png
+├── README.md
+├── s3_state
+│   └── main.tf
+└── tf
+    ├── backend.tf
+    ├── data.tf
+    ├── main.tf
+    ├── modules
+    │   ├── alb
+    │   │   ├── main.tf
+    │   │   ├── outputs.tf
+    │   │   └── vars.tf
+    │   ├── asg
+    │   │   ├── install.sh
+    │   │   ├── main.tf
+    │   │   ├── outputs.tf
+    │   │   └── vars.tf
+    │   ├── ec2
+    │   │   ├── install.sh
+    │   │   ├── main.tf
+    │   │   ├── outputs.tf
+    │   │   └── vars.tf
+    │   ├── ecr
+    │   │   ├── main.tf
+    │   │   ├── outputs.tf
+    │   │   └── vars.tf
+    │   ├── iam
+    │   │   ├── main.tf
+    │   │   ├── outputs.tf
+    │   │   └── vars.tf
+    │   ├── route53
+    │   │   ├── main.tf
+    │   │   ├── outputs.tf
+    │   │   └── vars.tf
+    │   ├── vpc
+    │   │   ├── main.tf
+    │   │   ├── outputs.tf
+    │   │   └── vars.tf
+    │   └── vpc_endpoints
+    │       ├── main.tf
+    │       ├── outputs.tf
+    │       └── vars.tf
+    ├── outputs.tf
+    ├── upload-tfvars.sh
+    └── vars.tf
+```
 
 ## Setup and Deployment
-1. **Clone the Repo**
-    ```
-    git clone https://github.com/omerrevach/yo-nginx.git
-    cd to-nginx
-    ```
 
-2. **Set Up GitHub Secrets**
+### 1. Clone the Repository
+```
+git clone https://github.com/omerrevach/yo-nginx.git
+cd yo-nginx
+```
 
-    To allow GitHub Actions to deploy infrastructure, go to your repo -> Settings-> Secrets and variables-> Actions and add these secrets:
+### 2. Set Up GitHub Secrets
+In your GitHub repository, go to:
+- Settings > Secrets and variables > Actions > New repository secret
 
-        AWS_ACCESS_KEY_ID
+Add:
+- AWS_ACCESS_KEY_ID
+- AWS_SECRET_ACCESS_KEY
+- AWS_REGION
+- AWS_ACCOUNT_ID
 
-        AWS_SECRET_ACCESS_KEY
+And these TF_VAR_* variables matching your terraform.tfvars file:
+* TF_VAR_vpc_name
+* TF_VAR_cidr
+* TF_VAR_azs
+* TF_VAR_public_subnets
+* TF_VAR_private_subnets
+* TF_VAR_enable_nat_gateway
+* TF_VAR_single_nat_gateway
+* TF_VAR_one_nat_gateway_per_az
+* TF_VAR_environment
+* TF_VAR_linux_ami
+* TF_VAR_instance_type
+* TF_VAR_hosted_zone_id
+* TF_VAR_domain_name
 
-        AWS_REGION (example: eu-north-1)
+### 3. Upload Terraform Variables to GitHub via CLI (More automated)
 
-3. **Define Infrastructure Variables**
+If you prefer to automate secret creation:
+```
+chmod +x tf/upload-tfvars.sh
+./tf/upload-tfvars.sh
+```
+This will upload each terraform.tfvars entry as a GitHub secret.
 
-In the tf directory, create a file named terraform.tfvars and paste your settings like this:
+### 4. Destroy Infrastructure
+GitHub Actions:
 
-    
-    # VPC settings
-    vpc_name           = "nginx-vpc"
-    cidr              = "10.0.0.0/16"
-    azs               = ["eu-north-1a", "eu-north-1b"]
-    public_subnets    = ["10.0.1.0/24", "10.0.2.0/24"]
-    private_subnets   = ["10.0.11.0/24", "10.0.12.0/24"]
-    enable_nat_gateway         = true
-    single_nat_gateway         = true
-    one_nat_gateway_per_az     = false
-    environment                = "dev"
+Use the Terraform Destroy workflow manually from the GitHub Actions tab.
 
-    # EC2 settings
-    linux_ami           = "ami-054ba1cb82f26097d"
-    instance_type       = "t3.micro"
+### Final Result
 
-    # ALB and ACM
-    alb_name_prefix     = "nginx"
+A secure, modular, production-ready infrastructure that deploys Dockerized apps on AWS using:
+- Private Auto Scaling Group
+- HTTPS Load Balancer
+- Secure GitHub Actions CI/CD pipeline
+- Infrastructure-as-Code best practices with Terraform
 
-    # Route 53
-    hosted_zone_id = "your_hosted_zone_id_for_domain_name"
-    domain_name    = "example.com"
-
-    region = "eu-north-1"
-    
-
-If you don't want to commit this file, you can add these values as GitHub secrets (manually or via a script) and reference them in your Terraform code using var.<name>.
-
-Optional: Use **GitHub CLI** to Upload Secrets
-
-Instead of adding secrets manually in the GitHub UI, you can use the GitHub CLI (gh) to quickly upload all your Terraform variables.
-
-1. **Install GitHub CLI**
-    ```
-    # macOS:
-      brew install gh
-
-    # Ubuntu:
-      sudo apt install gh
-
-    # Windows:
-      winget install --id GitHub.cli
-
-    Then login:
-
-    gh auth login
-    ```
-2. **Upload your secrets:**
-
-    - make sure all of values are correct in terraform.tfvars
-
-    ```
-    chmod +x upload-tfvars.sh
-    ./upload-tfvars.sh
-    ```
-
-    - this will store all tf vars one y one in the secrets in GitHub Repo
-    
-
-4. **Deployment**
-
-    Once your secrets and terraform.tfvars are set:
-
-    Push your changes to the dev branch
-
-    Open a pull request to main
-
-    If all security scans pass, GitHub Actions will automatically deploy the infrastructure
-
-**You can also deploy manually:**
-    
-    cd tf
-    terraform init
-    terraform apply -auto-approve
-    
-
-5. **Destroying Resources**
-
-    To tear down everything:
-
-    cd tf
-    terraform destroy -auto-approve
-
-    Or use the GitHub Actions workflow called destroy.yml, available in the "Actions" tab.
-
-
-#
+![WEbsite](yo-nginx.png)
