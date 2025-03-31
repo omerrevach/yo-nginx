@@ -65,4 +65,3 @@ module "ecr" {
   repo_name = "nginx-assignment"
 }
 
-#
